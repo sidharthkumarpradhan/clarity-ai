@@ -11,10 +11,52 @@ export const IMAGE_MODELS = [
   {
     id: "mirnet-low-light",
     name: "MIRNet (Low-Light Enhancement)",
-    description: "Enhances dark, low-light images using Multi-scale Residual Block architecture",
+    description: "Deep learning model using multi-scale residual blocks and dual attention for high-quality low-light enhancement (ECCV 2020)",
     scale: 1,
     type: "image" as const,
-    speed: "Medium",
+    speed: "Slow (~30s)",
+    quality: "High",
+    modelType: "Deep Learning",
+  },
+  {
+    id: "zero-dce",
+    name: "Zero-DCE (Curve Estimation)",
+    description: "Lightweight deep learning model using zero-reference curve estimation for dynamic range adjustment (CVPR 2020)",
+    scale: 1,
+    type: "image" as const,
+    speed: "Fast (~0.5s)",
+    quality: "Good",
+    modelType: "Deep Learning",
+  },
+  {
+    id: "clahe",
+    name: "CLAHE (Adaptive Histogram)",
+    description: "Classic computer vision technique that enhances local contrast while limiting noise amplification",
+    scale: 1,
+    type: "image" as const,
+    speed: "Instant",
+    quality: "Moderate",
+    modelType: "Traditional CV",
+  },
+  {
+    id: "histogram-eq",
+    name: "Histogram Equalization",
+    description: "Spreads out intensity values to enhance overall contrast - simple but effective baseline",
+    scale: 1,
+    type: "image" as const,
+    speed: "Instant",
+    quality: "Basic",
+    modelType: "Traditional CV",
+  },
+  {
+    id: "gamma-correction",
+    name: "Adaptive Gamma Correction",
+    description: "Power-law transformation that automatically estimates optimal gamma based on image brightness",
+    scale: 1,
+    type: "image" as const,
+    speed: "Instant",
+    quality: "Basic",
+    modelType: "Traditional CV",
   },
 ];
 
@@ -26,6 +68,8 @@ export const VIDEO_MODELS = [
     scale: 1,
     type: "video" as const,
     speed: "Slow",
+    quality: "High",
+    modelType: "Deep Learning",
   },
 ];
 
@@ -53,7 +97,7 @@ function startPythonServer(): Promise<void> {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(process.cwd(), "server", "mirnet_server.py");
 
-    logger.info(MODULE, "Starting persistent MIRNet Python server", { script: scriptPath });
+    logger.info(MODULE, "Starting persistent Python inference server", { script: scriptPath });
 
     pythonProcess = spawn("python3", ["-u", scriptPath], {
       cwd: process.cwd(),
@@ -77,7 +121,7 @@ function startPythonServer(): Promise<void> {
         const data = JSON.parse(line.trim());
 
         if (data.status === "ready") {
-          logger.info(MODULE, "MIRNet Python server is ready (model cached)");
+          logger.info(MODULE, "Python inference server is ready (models cached)");
           isReady = true;
           startingUp = false;
           resolve();
@@ -131,7 +175,7 @@ function startPythonServer(): Promise<void> {
   });
 }
 
-function sendInferenceRequest(inputPath: string, outputPath: string): Promise<any> {
+function sendInferenceRequest(inputPath: string, outputPath: string, modelId: string): Promise<any> {
   return new Promise((resolve, reject) => {
     if (!pythonProcess || !pythonProcess.stdin || pythonProcess.killed) {
       reject(new Error("Python server is not running"));
@@ -141,17 +185,17 @@ function sendInferenceRequest(inputPath: string, outputPath: string): Promise<an
     pendingResolve = resolve;
     pendingReject = reject;
 
-    const request = JSON.stringify({ input_path: inputPath, output_path: outputPath }) + "\n";
+    const request = JSON.stringify({ input_path: inputPath, output_path: outputPath, model: modelId }) + "\n";
     pythonProcess.stdin.write(request);
   });
 }
 
 export async function enhanceImageWithHF(
   inputPath: string,
-  _modelId: string,
+  modelId: string,
   outputDir: string
 ): Promise<string> {
-  logger.info(MODULE, "Starting MIRNet image enhancement", { inputPath });
+  logger.info(MODULE, "Starting image enhancement", { inputPath, model: modelId });
 
   const imageBuffer = fs.readFileSync(inputPath);
   logger.info(MODULE, "Read input file", { size: imageBuffer.length, path: inputPath });
@@ -163,9 +207,10 @@ export async function enhanceImageWithHF(
 
   const startTime = Date.now();
 
-  const result = await sendInferenceRequest(inputPath, outputPath);
+  const result = await sendInferenceRequest(inputPath, outputPath, modelId);
 
-  logger.info(MODULE, "MIRNet enhancement completed", {
+  logger.info(MODULE, "Enhancement completed", {
+    model: result.model || modelId,
     outputFilename,
     inputSize: imageBuffer.length,
     outputSize: result.output_size,

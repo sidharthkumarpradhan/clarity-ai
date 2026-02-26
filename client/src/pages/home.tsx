@@ -24,6 +24,8 @@ interface ModelInfo {
   scale: number;
   type: "image" | "video";
   speed: string;
+  quality?: string;
+  modelType?: string;
 }
 
 interface ModelsResponse {
@@ -100,10 +102,10 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary" className="text-xs">
           <Zap className="w-3 h-3 mr-1" />
-          {job.model.split("/")[1] || job.model}
+          {job.model}
         </Badge>
         <Badge variant="secondary" className="text-xs">
-          {job.scale}x Upscale
+          Enhancement
         </Badge>
       </div>
 
@@ -390,7 +392,7 @@ export default function Home() {
           </div>
           <Badge variant="secondary" className="text-xs">
             <Sparkles className="w-3 h-3 mr-1" />
-            MIRNet Model
+            5 AI Models
           </Badge>
         </div>
       </header>
@@ -404,15 +406,15 @@ export default function Home() {
               <span className="text-[#a01c2a] dark:text-red-400">crystal clear</span>
             </h2>
             <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Upload your dark or low-light images and videos. Our MIRNet AI model will enhance them to stunning clarity.
+              Upload your dark or low-light images. Compare results across 5 state-of-the-art enhancement models including MIRNet and Zero-DCE.
             </p>
 
             {/* Stats Row */}
             <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 flex-wrap">
               {[
-                { label: "MIRNet", sub: "Deep Learning Model" },
-                { label: "Low-Light", sub: "Image Enhancement" },
-                { label: "PyTorch", sub: "CPU Processing" },
+                { label: "5 Models", sub: "Enhancement Options" },
+                { label: "MIRNet + Zero-DCE", sub: "Deep Learning" },
+                { label: "CLAHE + More", sub: "Traditional CV" },
               ].map((item) => (
                 <div key={item.label} className="text-center">
                   <p className="text-lg sm:text-xl font-bold text-foreground">{item.label}</p>
@@ -523,11 +525,18 @@ export default function Home() {
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="text-xs">
                               <Zap className="w-3 h-3 mr-1" />
-                              {currentModel.speed} speed
+                              {currentModel.speed}
                             </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              Enhancement
-                            </Badge>
+                            {currentModel.quality && (
+                              <Badge variant="secondary" className="text-xs">
+                                Quality: {currentModel.quality}
+                              </Badge>
+                            )}
+                            {currentModel.modelType && (
+                              <Badge variant={currentModel.modelType === "Deep Learning" ? "default" : "outline"} className="text-xs">
+                                {currentModel.modelType}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       )}
@@ -640,7 +649,7 @@ export default function Home() {
               {
                 step: "2",
                 title: "AI enhancement",
-                desc: "MIRNet deep learning model enhances low-light and degraded images using multi-scale residual blocks.",
+                desc: "Choose from 5 models: MIRNet, Zero-DCE (deep learning), CLAHE, Histogram EQ, or Gamma Correction.",
                 icon: Sparkles,
                 color: "bg-purple-500/10 text-purple-500",
               },
@@ -684,7 +693,7 @@ export default function Home() {
                 School of Engineering & Computing, Fairfield University
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Powered by MIRNet via PyTorch
+                Powered by MIRNet, Zero-DCE, CLAHE, Histogram EQ & Gamma Correction
               </p>
             </div>
           </div>
