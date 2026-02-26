@@ -1,37 +1,52 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type EnhancementJob } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getJob(id: string): Promise<EnhancementJob | undefined>;
+  getAllJobs(): Promise<EnhancementJob[]>;
+  createJob(data: Omit<EnhancementJob, "id" | "createdAt">): Promise<EnhancementJob>;
+  updateJob(id: string, updates: Partial<EnhancementJob>): Promise<EnhancementJob | undefined>;
+  deleteJob(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private jobs: Map<string, EnhancementJob>;
 
   constructor() {
-    this.users = new Map();
+    this.jobs = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getJob(id: string): Promise<EnhancementJob | undefined> {
+    return this.jobs.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+  async getAllJobs(): Promise<EnhancementJob[]> {
+    return Array.from(this.jobs.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createJob(data: Omit<EnhancementJob, "id" | "createdAt">): Promise<EnhancementJob> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const job: EnhancementJob = {
+      ...data,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+    this.jobs.set(id, job);
+    return job;
+  }
+
+  async updateJob(id: string, updates: Partial<EnhancementJob>): Promise<EnhancementJob | undefined> {
+    const job = this.jobs.get(id);
+    if (!job) return undefined;
+    const updated = { ...job, ...updates };
+    this.jobs.set(id, updated);
+    return updated;
+  }
+
+  async deleteJob(id: string): Promise<boolean> {
+    return this.jobs.delete(id);
   }
 }
 

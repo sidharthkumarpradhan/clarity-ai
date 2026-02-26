@@ -1,18 +1,25 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const enhancementJobSchema = z.object({
+  id: z.string(),
+  type: z.enum(["image", "video"]),
+  status: z.enum(["pending", "processing", "completed", "failed"]),
+  model: z.string(),
+  scale: z.number(),
+  originalName: z.string(),
+  originalSize: z.number(),
+  enhancedUrl: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string(),
+  completedAt: z.string().nullable(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export type EnhancementJob = z.infer<typeof enhancementJobSchema>;
+
+export const createJobSchema = z.object({
+  type: z.enum(["image", "video"]),
+  model: z.string(),
+  scale: z.number(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type CreateJob = z.infer<typeof createJobSchema>;
