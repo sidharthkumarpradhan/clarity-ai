@@ -370,30 +370,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* University Header Bar */}
-      <div className="bg-[#a01c2a] dark:bg-[#7c1520]">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
+      {/* Header with University Logo */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img
               src={fairfieldLogo}
               alt="Fairfield University"
-              className="h-10 w-auto brightness-0 invert"
+              className="h-12 w-auto"
               data-testid="img-university-logo"
             />
-          </div>
-          <p className="text-white/80 text-xs hidden sm:block">
-            School of Engineering & Computing
-          </p>
-        </div>
-      </div>
-
-      {/* App Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#a01c2a]/10">
-              <Sparkles className="w-5 h-5 text-[#a01c2a] dark:text-red-400" />
-            </div>
+            <div className="h-8 w-px bg-border" />
             <div>
               <h1 className="text-lg font-bold text-foreground leading-none" data-testid="text-app-title">
                 ClarityAI
@@ -680,26 +667,23 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-[#a01c2a] dark:bg-[#7c1520]">
+      <footer className="border-t border-border bg-card">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img
                 src={fairfieldLogo}
                 alt="Fairfield University"
-                className="h-8 w-auto brightness-0 invert"
+                className="h-10 w-auto"
               />
-              <div className="h-6 w-px bg-white/20" />
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-white/80" />
-                <span className="text-sm font-semibold text-white">ClarityAI</span>
-              </div>
+              <div className="h-6 w-px bg-border" />
+              <span className="text-sm font-semibold text-foreground">ClarityAI</span>
             </div>
             <div className="text-center sm:text-right">
-              <p className="text-xs text-white/70">
+              <p className="text-xs text-muted-foreground">
                 School of Engineering & Computing, Fairfield University
               </p>
-              <p className="text-xs text-white/50 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Powered by Swin2SR via Hugging Face Inference API
               </p>
             </div>
