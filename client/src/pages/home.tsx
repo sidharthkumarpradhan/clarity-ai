@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Upload, Sparkles, Image, Video, Trash2, Download, 
   CheckCircle, XCircle, Clock, Loader2,
-  Zap, Star, Info, RotateCcw, Eye, EyeOff
+  Zap, Info, RotateCcw, Eye, EyeOff, GraduationCap, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { EnhancementJob } from "@shared/schema";
+import fairfieldLogo from "@assets/fairfieldUniversityLogo_1772082834920.png";
 
 interface ModelInfo {
   id: string;
@@ -64,12 +65,11 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
 
   return (
     <Card className="p-4 gap-3 flex flex-col border-card-border transition-all duration-200">
-      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`p-1.5 rounded-md shrink-0 ${isImage ? "bg-primary/10" : "bg-purple-500/10"}`}>
             {isImage ? (
-              <Image className={`w-4 h-4 text-primary`} />
+              <Image className="w-4 h-4 text-primary" />
             ) : (
               <Video className="w-4 h-4 text-purple-500" />
             )}
@@ -97,7 +97,6 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
         </div>
       </div>
 
-      {/* Model info */}
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary" className="text-xs">
           <Zap className="w-3 h-3 mr-1" />
@@ -108,7 +107,6 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
         </Badge>
       </div>
 
-      {/* Processing indicator */}
       {job.status === "processing" && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
@@ -119,7 +117,6 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
         </div>
       )}
 
-      {/* Pending indicator */}
       {job.status === "pending" && (
         <div className="flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 text-yellow-500" />
@@ -127,7 +124,6 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
         </div>
       )}
 
-      {/* Enhanced image preview */}
       {job.status === "completed" && job.enhancedUrl && isImage && (
         <div className="space-y-2">
           <div className="relative rounded-md bg-muted aspect-video flex items-center justify-center overflow-hidden">
@@ -168,7 +164,6 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
         </div>
       )}
 
-      {/* Video download */}
       {job.status === "completed" && job.enhancedUrl && !isImage && (
         <div className="space-y-2">
           {job.errorMessage && (
@@ -186,7 +181,6 @@ function JobCard({ job, onDelete }: { job: EnhancementJob; onDelete: (id: string
         </div>
       )}
 
-      {/* Error state */}
       {job.status === "failed" && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
           <p className="text-xs text-destructive">
@@ -375,55 +369,107 @@ export default function Home() {
   const filteredJobs = jobs.filter((j) => j.type === activeTab);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* University Header Bar */}
+      <div className="bg-[#a01c2a] dark:bg-[#7c1520]">
+        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Sparkles className="w-6 h-6 text-primary" />
+            <img
+              src={fairfieldLogo}
+              alt="Fairfield University"
+              className="h-10 w-auto brightness-0 invert"
+              data-testid="img-university-logo"
+            />
+          </div>
+          <p className="text-white/80 text-xs hidden sm:block">
+            School of Engineering & Computing
+          </p>
+        </div>
+      </div>
+
+      {/* App Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[#a01c2a]/10">
+              <Sparkles className="w-5 h-5 text-[#a01c2a] dark:text-red-400" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground leading-none" data-testid="text-app-title">
                 ClarityAI
               </h1>
-              <p className="text-xs text-muted-foreground">AI-Powered Enhancement</p>
+              <p className="text-xs text-muted-foreground">AI-Powered Media Enhancement</p>
             </div>
           </div>
           <Badge variant="secondary" className="text-xs">
-            <Star className="w-3 h-3 mr-1" />
-            Powered by Swin2SR
+            <Sparkles className="w-3 h-3 mr-1" />
+            Swin2SR Models
           </Badge>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
-        <div className="max-w-6xl mx-auto px-4 py-12 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight">
-            Turn blurry into{" "}
-            <span className="text-primary">crystal clear</span>
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Upload your blurry, dark, or low-resolution images and videos. Our AI models will enhance them to stunning clarity.
-          </p>
-          <div className="flex items-center justify-center gap-8 mt-8 flex-wrap">
-            {[
-              { label: "Up to 4x", sub: "resolution boost" },
-              { label: "Swin2SR", sub: "transformer model" },
-              { label: "Free", sub: "via Hugging Face" },
-            ].map((item) => (
-              <div key={item.label} className="text-center">
-                <p className="text-xl font-bold text-foreground">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.sub}</p>
-              </div>
-            ))}
+      {/* Hero Section with University Branding */}
+      <section className="border-b border-border bg-gradient-to-b from-[#a01c2a]/5 via-[#a01c2a]/3 to-transparent">
+        <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">
+          <div className="text-center">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground tracking-tight leading-tight">
+              Turn blurry into{" "}
+              <span className="text-[#a01c2a] dark:text-red-400">crystal clear</span>
+            </h2>
+            <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Upload your blurry, dark, or low-resolution images and videos. Our AI super-resolution models will enhance them to stunning clarity.
+            </p>
+
+            {/* Stats Row */}
+            <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 flex-wrap">
+              {[
+                { label: "Up to 4x", sub: "Resolution Boost" },
+                { label: "Swin2SR", sub: "Transformer Model" },
+                { label: "Real-time", sub: "Cloud Processing" },
+              ].map((item) => (
+                <div key={item.label} className="text-center">
+                  <p className="text-lg sm:text-xl font-bold text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Team Credits Card */}
+            <div className="mt-8 inline-flex flex-col items-center">
+              <Card className="inline-flex flex-col items-center gap-3 px-6 py-4 border-card-border bg-card/80 backdrop-blur-sm max-w-lg">
+                <div className="flex items-center gap-2 text-sm text-foreground font-medium">
+                  <Users className="w-4 h-4 text-[#a01c2a] dark:text-red-400" />
+                  <span>Presented by</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-sm font-semibold text-foreground" data-testid="text-presenter-1">
+                    Sidharth Kumar Pradhan
+                  </p>
+                  <p className="text-sm font-semibold text-foreground" data-testid="text-presenter-2">
+                    Naqibahmed Kadri
+                  </p>
+                </div>
+                <div className="w-full h-px bg-border" />
+                <div className="flex flex-col items-center gap-0.5">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Guided by</span>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground" data-testid="text-advisor">
+                    Dr. Sidike Paheding
+                  </p>
+                  <p className="text-xs text-muted-foreground" data-testid="text-department">
+                    School of Engineering & Computing, Fairfield University
+                  </p>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "image" | "video"); setSelectedFile(null); setSelectedModel(""); }}>
           <TabsList className="mb-6" data-testid="tabs-mode">
             <TabsTrigger value="image" data-testid="tab-image">
@@ -433,6 +479,7 @@ export default function Home() {
             <TabsTrigger value="video" data-testid="tab-video">
               <Video className="w-4 h-4 mr-2" />
               Videos
+              <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 font-medium leading-none">Beta</span>
             </TabsTrigger>
           </TabsList>
 
@@ -452,7 +499,6 @@ export default function Home() {
                     <DropZone type={tabType} onFile={setSelectedFile} disabled={enhanceMutation.isPending} />
                   )}
 
-                  {/* Model Selection */}
                   {availableModels.length > 0 && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
@@ -502,7 +548,7 @@ export default function Home() {
                   )}
 
                   <Button
-                    className="w-full"
+                    className="w-full bg-[#a01c2a] hover:bg-[#861724] text-white no-default-hover-elevate"
                     size="lg"
                     onClick={handleEnhance}
                     disabled={!selectedFile || enhanceMutation.isPending}
@@ -591,8 +637,8 @@ export default function Home() {
         </Tabs>
       </main>
 
-      {/* How it works section */}
-      <section className="border-t border-border bg-card/30 mt-8">
+      {/* How It Works Section */}
+      <section className="border-t border-border bg-card/30">
         <div className="max-w-6xl mx-auto px-4 py-12">
           <h3 className="text-xl font-bold text-foreground text-center mb-8">How it works</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -602,7 +648,7 @@ export default function Home() {
                 title: "Upload your file",
                 desc: "Drag and drop or click to upload a blurry, dark, or low-res image or video.",
                 icon: Upload,
-                color: "bg-primary/10 text-primary",
+                color: "bg-[#a01c2a]/10 text-[#a01c2a] dark:text-red-400",
               },
               {
                 step: "2",
@@ -616,7 +662,7 @@ export default function Home() {
                 title: "Download result",
                 desc: "Get your enhanced file up to 4x sharper and clearer than the original.",
                 icon: Download,
-                color: "bg-green-500/10 text-green-600",
+                color: "bg-green-500/10 text-green-600 dark:text-green-400",
               },
             ].map((item) => (
               <div key={item.step} className="flex flex-col items-center text-center gap-3 p-4">
@@ -634,15 +680,30 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">ClarityAI</span>
+      <footer className="border-t border-border bg-[#a01c2a] dark:bg-[#7c1520]">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={fairfieldLogo}
+                alt="Fairfield University"
+                className="h-8 w-auto brightness-0 invert"
+              />
+              <div className="h-6 w-px bg-white/20" />
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-white/80" />
+                <span className="text-sm font-semibold text-white">ClarityAI</span>
+              </div>
+            </div>
+            <div className="text-center sm:text-right">
+              <p className="text-xs text-white/70">
+                School of Engineering & Computing, Fairfield University
+              </p>
+              <p className="text-xs text-white/50 mt-0.5">
+                Powered by Swin2SR via Hugging Face Inference API
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Powered by Swin2SR via Hugging Face Inference API · Open source friendly
-          </p>
         </div>
       </footer>
     </div>
