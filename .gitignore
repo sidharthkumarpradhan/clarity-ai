@@ -1,10 +1,36 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
-models/*.pth
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+
+# Model weights (auto-downloaded at runtime)
+models/
+*.pth
+*.pt
+
+# Runtime upload/output folders
 uploads/
 enhanced/
-__pycache__/
+
+# Environment
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Replit/IDE
+.config/
+.upm/
+.pythonlibs/
+.replit
+replit.md
+
+# Node / frontend (not used)
+node_modules/
+dist/
+build/
+*.tar.gz
