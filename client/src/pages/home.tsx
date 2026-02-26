@@ -390,7 +390,7 @@ export default function Home() {
           </div>
           <Badge variant="secondary" className="text-xs">
             <Sparkles className="w-3 h-3 mr-1" />
-            Swin2SR Models
+            MIRNet Model
           </Badge>
         </div>
       </header>
@@ -404,15 +404,15 @@ export default function Home() {
               <span className="text-[#a01c2a] dark:text-red-400">crystal clear</span>
             </h2>
             <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Upload your blurry, dark, or low-resolution images and videos. Our AI super-resolution models will enhance them to stunning clarity.
+              Upload your dark or low-light images and videos. Our MIRNet AI model will enhance them to stunning clarity.
             </p>
 
             {/* Stats Row */}
             <div className="flex items-center justify-center gap-6 sm:gap-10 mt-8 flex-wrap">
               {[
-                { label: "Up to 4x", sub: "Resolution Boost" },
-                { label: "Swin2SR", sub: "Transformer Model" },
-                { label: "Real-time", sub: "Cloud Processing" },
+                { label: "MIRNet", sub: "Deep Learning Model" },
+                { label: "Low-Light", sub: "Image Enhancement" },
+                { label: "PyTorch", sub: "CPU Processing" },
               ].map((item) => (
                 <div key={item.label} className="text-center">
                   <p className="text-lg sm:text-xl font-bold text-foreground">{item.label}</p>
@@ -526,7 +526,7 @@ export default function Home() {
                               {currentModel.speed} speed
                             </Badge>
                             <Badge variant="secondary" className="text-xs">
-                              {currentModel.scale}x upscale
+                              Enhancement
                             </Badge>
                           </div>
                         </div>
@@ -640,14 +640,14 @@ export default function Home() {
               {
                 step: "2",
                 title: "AI enhancement",
-                desc: "Swin2SR transformer models powered by Hugging Face analyze and restore every pixel.",
+                desc: "MIRNet deep learning model enhances low-light and degraded images using multi-scale residual blocks.",
                 icon: Sparkles,
                 color: "bg-purple-500/10 text-purple-500",
               },
               {
                 step: "3",
                 title: "Download result",
-                desc: "Get your enhanced file up to 4x sharper and clearer than the original.",
+                desc: "Get your enhanced file with improved brightness, contrast, and detail recovery.",
                 icon: Download,
                 color: "bg-green-500/10 text-green-600 dark:text-green-400",
               },
@@ -684,7 +684,7 @@ export default function Home() {
                 School of Engineering & Computing, Fairfield University
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Powered by Swin2SR via Hugging Face Inference API
+                Powered by MIRNet via PyTorch
               </p>
             </div>
           </div>

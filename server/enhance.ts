@@ -1,39 +1,18 @@
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import sharp from "sharp";
+import { spawn, ChildProcess } from "child_process";
+import { createInterface, Interface } from "readline";
 import { logger } from "./logger";
 
 const MODULE = "enhance";
 
-const HF_MODELS: Record<string, string> = {
-  "swin2sr-classical-x2": "Xenova/swin2SR-classical-sr-x2-64",
-  "swin2sr-realworld-x4": "Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr",
-  "swin2sr-compressed-x4": "Xenova/swin2SR-compressed-sr-x4-48",
-};
-
 export const IMAGE_MODELS = [
   {
-    id: "swin2sr-classical-x2",
-    name: "Swin2SR x2 (Classical)",
-    description: "Fast classical super-resolution, 2x upscale",
-    scale: 2,
-    type: "image" as const,
-    speed: "Fast",
-  },
-  {
-    id: "swin2sr-realworld-x4",
-    name: "Swin2SR x4 (Real-World)",
-    description: "Real-world image restoration & 4x super-resolution",
-    scale: 4,
-    type: "image" as const,
-    speed: "Medium",
-  },
-  {
-    id: "swin2sr-compressed-x4",
-    name: "Swin2SR x4 (Compressed)",
-    description: "Compressed artifact removal + 4x upscale",
-    scale: 4,
+    id: "mirnet-low-light",
+    name: "MIRNet (Low-Light Enhancement)",
+    description: "Enhances dark, low-light images using Multi-scale Residual Block architecture",
+    scale: 1,
     type: "image" as const,
     speed: "Medium",
   },
@@ -41,97 +20,159 @@ export const IMAGE_MODELS = [
 
 export const VIDEO_MODELS = [
   {
-    id: "swin2sr-realworld-x4",
-    name: "Swin2SR x4 (frame-by-frame)",
-    description: "Process each video frame for 4x enhancement",
-    scale: 4,
+    id: "mirnet-low-light",
+    name: "MIRNet (frame-by-frame)",
+    description: "Process each video frame for low-light enhancement",
+    scale: 1,
     type: "video" as const,
     speed: "Slow",
   },
 ];
 
-let pipelineInstance: any = null;
-let currentModelId: string | null = null;
+let pythonProcess: ChildProcess | null = null;
+let pythonRL: Interface | null = null;
+let isReady = false;
+let pendingResolve: ((value: any) => void) | null = null;
+let pendingReject: ((reason: any) => void) | null = null;
+let startingUp = false;
 
-async function getUpscaler(modelId: string) {
-  const hfModelId = HF_MODELS[modelId];
-  if (!hfModelId) {
-    throw new Error(`Unknown model: ${modelId}`);
-  }
-
-  if (pipelineInstance && currentModelId === modelId) {
-    logger.debug(MODULE, `Reusing cached pipeline`, { model: hfModelId });
-    return pipelineInstance;
-  }
-
-  logger.info(MODULE, `Loading Transformers.js pipeline`, { model: hfModelId });
-  const loadStart = Date.now();
-
-  const { pipeline } = await import("@huggingface/transformers");
-
-  try {
-    pipelineInstance = await pipeline("image-to-image", hfModelId, {
-      dtype: "fp32",
+function startPythonServer(): Promise<void> {
+  if (startingUp) {
+    return new Promise((resolve) => {
+      const check = setInterval(() => {
+        if (isReady) { clearInterval(check); resolve(); }
+      }, 500);
     });
-  } catch (loadError: any) {
-    logger.error(MODULE, `Failed to load model`, {
-      model: hfModelId,
-      error: loadError.message,
-      elapsed: `${Date.now() - loadStart}ms`,
-    });
-    throw new Error(`Failed to load AI model "${hfModelId}": ${loadError.message}`);
   }
-  currentModelId = modelId;
 
-  logger.info(MODULE, `Pipeline loaded`, { model: hfModelId, elapsed: `${Date.now() - loadStart}ms` });
-  return pipelineInstance;
+  if (isReady && pythonProcess && !pythonProcess.killed) {
+    return Promise.resolve();
+  }
+
+  startingUp = true;
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(process.cwd(), "server", "mirnet_server.py");
+
+    logger.info(MODULE, "Starting persistent MIRNet Python server", { script: scriptPath });
+
+    pythonProcess = spawn("python3", ["-u", scriptPath], {
+      cwd: process.cwd(),
+      env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1", PYTHONUNBUFFERED: "1" },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    pythonProcess.stderr?.on("data", (data: Buffer) => {
+      const lines = data.toString().trim().split("\n");
+      for (const line of lines) {
+        if (line.trim()) {
+          logger.info(MODULE, `[python] ${line.trim()}`);
+        }
+      }
+    });
+
+    pythonRL = createInterface({ input: pythonProcess.stdout! });
+
+    pythonRL.on("line", (line: string) => {
+      try {
+        const data = JSON.parse(line.trim());
+
+        if (data.status === "ready") {
+          logger.info(MODULE, "MIRNet Python server is ready (model cached)");
+          isReady = true;
+          startingUp = false;
+          resolve();
+          return;
+        }
+
+        if (pendingResolve) {
+          const res = pendingResolve;
+          const rej = pendingReject;
+          pendingResolve = null;
+          pendingReject = null;
+
+          if (data.success) {
+            res(data);
+          } else {
+            rej!(new Error(data.error || "Unknown inference error"));
+          }
+        }
+      } catch (e: any) {
+        logger.error(MODULE, "Failed to parse Python output", { line: line.slice(0, 300) });
+        if (pendingReject) {
+          const rej = pendingReject;
+          pendingResolve = null;
+          pendingReject = null;
+          rej(new Error("Failed to parse inference result"));
+        }
+      }
+    });
+
+    pythonProcess.on("close", (code: number | null) => {
+      logger.warn(MODULE, "Python server process exited", { code });
+      isReady = false;
+      startingUp = false;
+      pythonProcess = null;
+      pythonRL = null;
+
+      if (pendingReject) {
+        const rej = pendingReject;
+        pendingResolve = null;
+        pendingReject = null;
+        rej(new Error(`Python server exited with code ${code}`));
+      }
+    });
+
+    pythonProcess.on("error", (err: Error) => {
+      logger.error(MODULE, "Failed to start Python server", { error: err.message });
+      isReady = false;
+      startingUp = false;
+      reject(err);
+    });
+  });
+}
+
+function sendInferenceRequest(inputPath: string, outputPath: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (!pythonProcess || !pythonProcess.stdin || pythonProcess.killed) {
+      reject(new Error("Python server is not running"));
+      return;
+    }
+
+    pendingResolve = resolve;
+    pendingReject = reject;
+
+    const request = JSON.stringify({ input_path: inputPath, output_path: outputPath }) + "\n";
+    pythonProcess.stdin.write(request);
+  });
 }
 
 export async function enhanceImageWithHF(
   inputPath: string,
-  modelId: string,
+  _modelId: string,
   outputDir: string
 ): Promise<string> {
-  const hfModelId = HF_MODELS[modelId] || modelId;
-  logger.info(MODULE, `Starting image enhancement`, { inputPath, model: hfModelId, modelId });
+  logger.info(MODULE, "Starting MIRNet image enhancement", { inputPath });
 
   const imageBuffer = fs.readFileSync(inputPath);
-  logger.info(MODULE, `Read input file`, { size: imageBuffer.length, path: inputPath });
+  logger.info(MODULE, "Read input file", { size: imageBuffer.length, path: inputPath });
 
-  const metadata = await sharp(imageBuffer).metadata();
-  logger.info(MODULE, `Input image metadata`, {
-    width: metadata.width,
-    height: metadata.height,
-    format: metadata.format,
-    channels: metadata.channels,
-  });
-
-  const upscaler = await getUpscaler(modelId);
-
-  logger.info(MODULE, `Running super-resolution inference`, { model: hfModelId });
-  const inferStart = Date.now();
-
-  const result = await upscaler(inputPath);
-
-  const inferElapsed = Date.now() - inferStart;
-  logger.info(MODULE, `Inference completed`, { model: hfModelId, elapsed: `${inferElapsed}ms` });
+  await startPythonServer();
 
   const outputFilename = `enhanced_${randomUUID()}.png`;
   const outputPath = path.join(outputDir, outputFilename);
 
-  await result.save(outputPath);
+  const startTime = Date.now();
 
-  const outputStats = fs.statSync(outputPath);
-  const outputMeta = await sharp(outputPath).metadata();
+  const result = await sendInferenceRequest(inputPath, outputPath);
 
-  logger.info(MODULE, `Image enhanced and saved`, {
-    outputPath,
+  logger.info(MODULE, "MIRNet enhancement completed", {
     outputFilename,
     inputSize: imageBuffer.length,
-    outputSize: outputStats.size,
-    inputDimensions: `${metadata.width}x${metadata.height}`,
-    outputDimensions: `${outputMeta.width}x${outputMeta.height}`,
-    totalElapsed: `${Date.now() - inferStart}ms`,
+    outputSize: result.output_size,
+    inputDimensions: result.input_dimensions,
+    inferenceTime: `${result.inference_time}s`,
+    totalTime: `${result.total_time}s`,
+    wallTime: `${Date.now() - startTime}ms`,
   });
 
   return outputFilename;
