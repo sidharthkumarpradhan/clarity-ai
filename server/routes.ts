@@ -5,19 +5,19 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { enhanceImageWithHF, IMAGE_MODELS, VIDEO_MODELS } from "./enhance";
-import { log } from "./index";
+import { logger } from "./logger";
 
+const MODULE = "routes";
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 const ENHANCED_DIR = path.join(process.cwd(), "enhanced");
 
-// Ensure directories exist
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 if (!fs.existsSync(ENHANCED_DIR)) fs.mkdirSync(ENHANCED_DIR, { recursive: true });
 
 const upload = multer({
   dest: UPLOADS_DIR,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB
+    fileSize: 50 * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
     const imageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/bmp"];
@@ -34,42 +34,46 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Get available models
   app.get("/api/models", (_req: Request, res: Response) => {
+    logger.info(MODULE, "Fetching available models");
     res.json({
       image: IMAGE_MODELS,
       video: VIDEO_MODELS,
     });
   });
 
-  // Get all jobs
   app.get("/api/jobs", async (_req: Request, res: Response) => {
     const jobs = await storage.getAllJobs();
     res.json(jobs);
   });
 
-  // Get a specific job
   app.get("/api/jobs/:id", async (req: Request, res: Response) => {
-    const job = await storage.getJob(req.params.id as string);
+    const id = req.params.id as string;
+    logger.debug(MODULE, `Fetching job`, { id });
+    const job = await storage.getJob(id);
     if (!job) {
+      logger.warn(MODULE, `Job not found`, { id });
       return res.status(404).json({ message: "Job not found" });
     }
     res.json(job);
   });
 
-  // Delete a job
   app.delete("/api/jobs/:id", async (req: Request, res: Response) => {
-    const job = await storage.getJob(req.params.id as string);
+    const id = req.params.id as string;
+    logger.info(MODULE, `Deleting job`, { id });
+    const job = await storage.getJob(id);
     if (!job) {
+      logger.warn(MODULE, `Cannot delete - job not found`, { id });
       return res.status(404).json({ message: "Job not found" });
     }
-    await storage.deleteJob(req.params.id as string);
+    await storage.deleteJob(id);
+    logger.info(MODULE, `Job deleted successfully`, { id });
     res.json({ success: true });
   });
 
-  // Upload and enhance image
   app.post("/api/enhance/image", upload.single("file"), async (req: Request, res: Response) => {
     if (!req.file) {
+      logger.warn(MODULE, "Image upload attempted with no file");
       return res.status(400).json({ message: "No file uploaded" });
     }
 
@@ -77,10 +81,18 @@ export async function registerRoutes(
     const model = IMAGE_MODELS.find((m) => m.id === modelId);
 
     if (!model) {
+      logger.error(MODULE, "Invalid model selected", { modelId });
       return res.status(400).json({ message: "Invalid model selected" });
     }
 
-    // Create job immediately
+    logger.info(MODULE, `Image upload received`, {
+      filename: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      model: modelId,
+      scale: model.scale,
+    });
+
     const job = await storage.createJob({
       type: "image",
       status: "pending",
@@ -93,16 +105,19 @@ export async function registerRoutes(
       completedAt: null,
     });
 
-    // Process async
+    logger.info(MODULE, `Job created`, { jobId: job.id, model: modelId });
+
     (async () => {
       try {
         await storage.updateJob(job.id, { status: "processing" });
-        log(`Starting enhancement for job ${job.id} with model ${modelId}`);
+        logger.info(MODULE, `Job processing started`, { jobId: job.id, model: modelId });
 
         const outputFilename = await enhanceImageWithHF(req.file!.path, modelId, ENHANCED_DIR);
 
-        // Clean up upload
-        fs.unlinkSync(req.file!.path);
+        if (req.file?.path && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+          logger.debug(MODULE, `Cleaned up uploaded file`, { path: req.file.path });
+        }
 
         await storage.updateJob(job.id, {
           status: "completed",
@@ -110,10 +125,9 @@ export async function registerRoutes(
           completedAt: new Date().toISOString(),
         });
 
-        log(`Job ${job.id} completed: ${outputFilename}`);
+        logger.info(MODULE, `Job completed successfully`, { jobId: job.id, outputFilename });
       } catch (err: any) {
-        log(`Job ${job.id} failed: ${err.message}`);
-        // Clean up upload if it exists
+        logger.error(MODULE, `Job failed`, { jobId: job.id, error: err.message, stack: err.stack?.slice(0, 300) });
         if (req.file?.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
@@ -128,9 +142,9 @@ export async function registerRoutes(
     res.json(job);
   });
 
-  // Upload and enhance video
   app.post("/api/enhance/video", upload.single("file"), async (req: Request, res: Response) => {
     if (!req.file) {
+      logger.warn(MODULE, "Video upload attempted with no file");
       return res.status(400).json({ message: "No file uploaded" });
     }
 
@@ -138,8 +152,15 @@ export async function registerRoutes(
     const model = VIDEO_MODELS.find((m) => m.id === modelId);
 
     if (!model) {
+      logger.error(MODULE, "Invalid video model selected", { modelId });
       return res.status(400).json({ message: "Invalid model selected" });
     }
+
+    logger.info(MODULE, `Video upload received`, {
+      filename: req.file.originalname,
+      size: req.file.size,
+      model: modelId,
+    });
 
     const job = await storage.createJob({
       type: "video",
@@ -153,19 +174,15 @@ export async function registerRoutes(
       completedAt: null,
     });
 
-    // For video: we note this is complex and return appropriate message
-    // Video enhancement via HF API is limited; we inform the user
     (async () => {
       try {
         await storage.updateJob(job.id, { status: "processing" });
+        logger.info(MODULE, `Video processing started`, { jobId: job.id });
 
-        // For now, copy the video and note limitations
-        // True video enhancement would require frame-by-frame processing with ffmpeg
         const ext = path.extname(req.file!.originalname) || ".mp4";
         const outputFilename = `enhanced_${job.id}${ext}`;
         const outputPath = path.join(ENHANCED_DIR, outputFilename);
 
-        // Copy original as-is (placeholder for full ffmpeg pipeline)
         fs.copyFileSync(req.file!.path, outputPath);
         fs.unlinkSync(req.file!.path);
 
@@ -176,9 +193,9 @@ export async function registerRoutes(
           errorMessage: "Note: Full video frame-by-frame AI enhancement requires ffmpeg. This is a preview version.",
         });
 
-        log(`Video job ${job.id} completed`);
+        logger.info(MODULE, `Video job completed`, { jobId: job.id, outputFilename });
       } catch (err: any) {
-        log(`Video job ${job.id} failed: ${err.message}`);
+        logger.error(MODULE, `Video job failed`, { jobId: job.id, error: err.message });
         if (req.file?.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
@@ -193,19 +210,18 @@ export async function registerRoutes(
     res.json(job);
   });
 
-  // Serve enhanced files
   app.get("/api/enhanced/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename as string;
     const filePath = path.join(ENHANCED_DIR, filename);
 
     if (!fs.existsSync(filePath)) {
+      logger.warn(MODULE, `Enhanced file not found`, { filename });
       return res.status(404).json({ message: "File not found" });
     }
 
     res.sendFile(filePath);
   });
 
-  // Serve original uploaded files (for preview)
   app.get("/api/uploads/:filename", (req: Request, res: Response) => {
     const filename = req.params.filename as string;
     const filePath = path.join(UPLOADS_DIR, filename);

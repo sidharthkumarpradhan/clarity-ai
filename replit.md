@@ -1,13 +1,14 @@
 # ClarityAI - AI Image & Video Enhancement
 
 ## Overview
-A web application that enhances blurry, dark, or low-resolution images and videos using AI super-resolution models from Hugging Face.
+A web application that enhances blurry, dark, or low-resolution images and videos using AI super-resolution models. Presented by Sidharth Kumar Pradhan & Naqibahmed Kadri, guided by Dr. Sidike Paheding, School of Engineering & Computing, Fairfield University.
 
 ## Architecture
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + shadcn/ui
 - **Backend**: Node.js + Express (TypeScript)
-- **AI**: Hugging Face Inference API using Swin2SR models
-- **File handling**: Multer for uploads, Sharp for image processing
+- **AI**: Swin2SR models via @huggingface/transformers (Transformers.js, ONNX runtime, runs locally on CPU)
+- **File handling**: Multer for uploads, Sharp for image metadata
+- **Logging**: Custom structured logger (server/logger.ts) with color-coded levels, timestamps, and JSON metadata
 
 ## Key Features
 - Upload images (JPEG, PNG, WebP, BMP) and videos (MP4, WebM, AVI, MOV, GIF)
@@ -16,13 +17,14 @@ A web application that enhances blurry, dark, or low-resolution images and video
 - Download enhanced results
 - Drag-and-drop upload interface
 - Preview enhanced images in-browser
+- Fairfield University branding with crimson (#a01c2a) color scheme
 
-## Models Available
-| Model | Description | Scale |
+## Models Available (ONNX via Xenova)
+| Model | HF Model ID | Scale |
 |-------|-------------|-------|
-| Swin2SR x2 | Fast classical super-resolution | 2x |
-| Swin2SR x4 Real-World | Real-world image restoration | 4x |
-| Swin2SR x4 Compressed | Compressed artifact removal + upscale | 4x |
+| Swin2SR x2 Classical | Xenova/swin2SR-classical-sr-x2-64 | 2x |
+| Swin2SR x4 Real-World | Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr | 4x |
+| Swin2SR x4 Compressed | Xenova/swin2SR-compressed-sr-x4-48 | 4x |
 
 ## API Endpoints
 - `GET /api/models` - List available AI models
@@ -34,15 +36,16 @@ A web application that enhances blurry, dark, or low-resolution images and video
 - `GET /api/enhanced/:filename` - Serve enhanced files
 
 ## Environment Variables
-- `HF_TOKEN` - Hugging Face API token (required)
+- `HF_TOKEN` - Hugging Face API token (used for model auth)
 
 ## File Structure
 ```
 server/
   index.ts      - Express server setup
-  routes.ts     - API routes
+  routes.ts     - API routes with comprehensive logging
   storage.ts    - In-memory job storage
-  enhance.ts    - HF API integration logic
+  enhance.ts    - Transformers.js ONNX model inference
+  logger.ts     - Structured logger module
 
 client/src/
   pages/home.tsx  - Main UI page
@@ -55,10 +58,7 @@ uploads/        - Temp upload directory (auto-created)
 enhanced/       - Output files directory (auto-created)
 ```
 
-## Future Enhancements
-- ffmpeg integration for true frame-by-frame video enhancement
-- Additional modalities: audio denoising, hyperspectral imaging
-- Authentication and user accounts
-- Processing history persistence (PostgreSQL)
-- Batch processing support
-- Edge device optimization (WebGPU, ONNX runtime)
+## Known Limitations
+- Video enhancement is a placeholder (copies file without AI processing); full implementation requires ffmpeg for frame extraction
+- First model load takes ~10s to download ONNX weights; subsequent requests use cached pipeline
+- CPU-only inference; processing time depends on image size
