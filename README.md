@@ -1,6 +1,6 @@
 # ClarityAI — AI-Powered Low-Light Image Enhancement
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([https://clarity-ai-hqdrx4bj3hfjpjrnnwkiky.streamlit.app](https://clarity-ai-fairfield-stag.streamlit.app/)/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([https://clarity-ai-fairfield-stag.streamlit.app/](https://clarity-ai-fairfield-stag.streamlit.app/)/)
 
 ClarityAI is an interactive Streamlit web app for enhancing dark and low-light photographs using a suite of deep learning and classical computer vision methods. Upload any image and choose from five enhancement algorithms — from state-of-the-art neural networks to instant classical techniques.
 
